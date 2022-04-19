@@ -16,20 +16,6 @@ const isValidObjectId= function (a){
     }
 }
 
-const isValid=function(valid){
-    if(valid==null){
-        return false }   
-            //because findOne etc. returns null if no object found
-    if(typeof(valid)=="string"){          //checking if valid is empty space or empty string
-        if(!valid) return false
-        if(!valid.trim()) return false
-    }
-    if(Array.isArray(valid)){
-        if(valid.length==0) return false
-    }
-    return true
-}
-
 const checkValidEmail = function (email){
     var emailRegex =/^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/;
     if(emailRegex.test(email)) {
@@ -61,4 +47,4 @@ const checkIndianPincode= function(b){
             return false; 
         }  
 };
-module.exports={ isValidObjectId, isValid, checkIndianNumber, checkValidEmail, checkIndianPincode }
+module.exports={ isValidObjectId, checkIndianNumber, checkValidEmail, checkIndianPincode }

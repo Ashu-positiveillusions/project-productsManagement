@@ -4,9 +4,7 @@ const aws = require('../photoUpload/awsS3')
 
 
 const createProduct = async function(req,res){
-
-    if(!req.body.data) return res.status(400).send({status:false, message: "Please provide the product details as a JSON against a key 'data' in formData."})
-    req.body = JSON.parse(req.body.data)
+try{
 
     if(!req.body.title)return res.status(400).send({status: false, message:"Title Required"})
     if(!req.body.description) return res.status(400).send({status: false, message:"Description Required"})
@@ -16,7 +14,7 @@ const createProduct = async function(req,res){
 
 
     const productData = req.body;
-    const {title, description, price, availableSizes, installments} =productData;
+    let {title, description, price, availableSizes, installments} =productData;
     
     //required validation
     if(!title) return res.status(400).send({status: false, message:"Title Required"})
@@ -24,9 +22,12 @@ const createProduct = async function(req,res){
     if(!price) return res.status(400).send({status: false, message:"Price Required"})
     if(!installments) return res.status(400).send({status: false, message:"installments Required"})
 
+    price = JSON.parse(price)
+    installments = JSON.parse(installments)
+
     //validation of availableSizes
     const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
-    if(availableSizes.length == 0) return res.status(400).send({status: false, message: "Please enter atleast one size."})
+    if(!availableSizes) return res.status(400).send({status: false, message: "Please enter atleast one size."})
     for(let i=0;i<availableSizes.length;i++){
         if(!(sizes.includes(availableSizes[i]))){
             return res.status(400).send({status: false, message:"Sizes should be among [S, XS, M, X, L, XXL, XL]"})
@@ -48,10 +49,14 @@ const createProduct = async function(req,res){
 
     const product = await productModel.create(productData)
     return res.status(201).send({status:true, message:"Success", data:product})
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 const productsData = async function(req,res){
+try{
 
     const filter = req.query;
     const keys = Object.keys(filter);
@@ -157,11 +162,15 @@ const productsData = async function(req,res){
     const products = await productModel.find(filter);
     return res.status(200).send({status:true, message: "Success", data: products})
 
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 
 const getProductById = async function(req, res){
+try{
 
     const productId = req.params.productId;
     if(!(validator.isValidObjectId(productId))) return res.status(400).send({status: false, message: "Please provide valid productId"})
@@ -172,20 +181,22 @@ const getProductById = async function(req, res){
 
     return res.status(200).send({status: true, message: 'Success', data:productDetails})
 
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 const updateProductById = async function(req, res){ 
+try{
 
     const productId = req.params.productId;
     if(!(validator.isValidObjectId(productId))) return res.status(400).send({status: false, message: "Please provide valid productId"})
 
-    if((req.body.data)){
-        req.body = JSON.parse(req.body.data)
-        let files = req.files
-        if (files && files.length > 0) {
-            let uploadedFileURL = await aws.uploadFile(files[0])
-            req.body.productImage = uploadedFileURL;
-        }
+
+    let files = req.files
+    if (files && files.length > 0) {
+        let uploadedFileURL = await aws.uploadFile(files[0])
+        req.body.productImage = uploadedFileURL;
     }
     
     const updateData = req.body;
@@ -213,7 +224,7 @@ const updateProductById = async function(req, res){
     //enum check availableSizes
     if(keys.includes("availableSizes")){
         const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
-        if(updateData.availableSizes.length ==0) return res.status(400).send({status: false, message: "Please provide atleast one size to update" })
+        if(!(updateData.availableSizes)) return res.status(400).send({status: false, message: "Please provide atleast one size to update" })
         for(let i=0;i<updateData.availableSizes.length;i++){
             if(!(sizes.includes(updateData.availableSizes[i]))){
                 return res.status(400).send({status: false, message:"Sizes should be among [S, XS, M, X, L, XXL, XL]"})
@@ -225,12 +236,16 @@ const updateProductById = async function(req, res){
     const updateDetails = await productModel.findOneAndUpdate({_id:productId, isDeleted:false}, updateData, {new:true})
     if(!updateDetails) return res.status(404).send({status:false, message:"No such product exists"})
     return res.status(200).send({status: true, message: 'Success', data:updateDetails})
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 
 
 const deleteProduct = async function(req, res){
+try{
 
     const productId = req.params.productId;
     if(!(validator.isValidObjectId(productId))) return res.status(400).send({status: false, message: "Please provide valid productId"})
@@ -238,6 +253,9 @@ const deleteProduct = async function(req, res){
     const productDetails = await productModel.findOneAndUpdate({_id:productId, isDeleted:false},{isDeleted:true, deletedAt: Date.now()},{new:true})
     if(!productDetails) return res.status(404).send({status:false, message:"No such product exists"})
     return res.status(200).send({status: true, message: 'Deleted Successfully'})
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 module.exports = {createProduct, productsData, getProductById, updateProductById, deleteProduct}

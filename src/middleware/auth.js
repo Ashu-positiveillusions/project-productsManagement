@@ -1,8 +1,7 @@
 const jwt = require("jsonwebtoken");
 
-const authenticationUser = function(req,res,next)
-{
-//try {
+const authenticationUser = function(req,res,next){
+try{
 
     let token1 = req.header("Authorization")
     if (!token1) return res.status(400).send({ status: false, message: "token must be present" });
@@ -18,12 +17,9 @@ const authenticationUser = function(req,res,next)
     const loggedInUser=decodedToken.userId;
     req.headers["userid"]=loggedInUser
     next();
-// }
-// catch(error)
-// {
-// res.status(500).send({message:"Error", Error:error.message})
-// }
+}catch(error){
+    return res.status(500).send({message:"Error", Error:error.message})
+}
 }
 
 module.exports.authenticationUser = authenticationUser;
-

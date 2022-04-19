@@ -1,11 +1,10 @@
-const cartModel = require('../models/cartModel')
-const productModel = require('../models/productModel')
 const userModel = require('../models/userModel')
 const validator = require('../validator/validator')
 const orderModel = require('../models/orderModel')
 
 
 const createOrders = async function(req,res){
+try{
 
     //path params,valid objectId & authorisation check
     const userId1 = req.params.userId;
@@ -52,11 +51,14 @@ const createOrders = async function(req,res){
     return res.status(201).send({status:true, message:"Success", data:orderData})
 
 
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 const updateOrders = async function(req,res){
+try{
 
-    
     //path params,valid objectId & authorisation check
     const userId = req.params.userId;
 
@@ -102,6 +104,9 @@ const updateOrders = async function(req,res){
     const updateOrderStatus = await orderModel.findOneAndUpdate( {_id:orderId, cancellable:true}, {status:status}, {new:true})
 
     return res.status(200).send({status:true, message:"Success", data:updateOrderStatus})
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 module.exports = {createOrders, updateOrders}

@@ -5,6 +5,7 @@ const userModel = require('../models/userModel')
 const validator = require('../validator/validator')
 
 const createCart = async function(req, res){
+try{
     
     //path params,valid objectId & authorisation check
     const userId = req.params.userId;
@@ -118,12 +119,16 @@ const createCart = async function(req, res){
             const cart = await cartModel.findOneAndUpdate({userId:userId1},{items:items, totalPrice: totalPrice,totalItems:totalItems }, {new:true})
             return res.status(201).send({status:true, message:"Success", data:cart})
     }
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 
 
 const removeProduct = async function(req, res){
+try{
 
     //path params,valid objectId & authorisation check
     const userId = req.params.userId;
@@ -230,11 +235,15 @@ const removeProduct = async function(req, res){
     }
 
     
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 const getCart = async function(req,res){
 
+try{
     const userId = req.params.userId
 
     if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please enter a valid UserId in params."})
@@ -251,11 +260,15 @@ const getCart = async function(req,res){
 
     return res.status(200).send({status: true, message: "success", data: cart})
 
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 
 
 const deleteCart = async function(req,res){
+try{
 
     const userId = req.params.userId
     if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please enter a valid UserId in params."})
@@ -283,6 +296,9 @@ const deleteCart = async function(req,res){
 
     return res.status(204).send({status: true, message: "successfully deleted"})
 
+}catch(error){
+    return res.status(500).send({status:false, Error:error.message})
+}
 }
 
 module.exports = {createCart, removeProduct, getCart, deleteCart}
