@@ -11,7 +11,7 @@ const productSchema = new mongoose.Schema({
     productImage: { type: String, required: true },
     style: { type: String, trim: true },
     availableSizes: { type: [String], enum: ["S", "XS", "M", "X", "L", "XXL", "XL"] },// atLeast one size value validation
-    installments: { type: Number, required: true, default: 0 },//availability of products
+    installments: { type: Number, required: true, default: 20 },//availability of products
     deletedAt: { type: Date },
     isDeleted: { type: Boolean, default: false }
 

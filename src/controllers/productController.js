@@ -20,11 +20,9 @@ try{
     if(!title) return res.status(400).send({status: false, message:"Title Required"})
     if(!description) return res.status(400).send({status: false, message:"Description Required"})
     if(!price) return res.status(400).send({status: false, message:"Price Required"})
-    if(!installments) return res.status(400).send({status: false, message:"installments Required"})
-
+    
     price = JSON.parse(price)
-    installments = JSON.parse(installments)
-
+    
     //validation of availableSizes
     const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
     if(!availableSizes) return res.status(400).send({status: false, message: "Please enter atleast one size."})

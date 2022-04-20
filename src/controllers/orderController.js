@@ -96,9 +96,9 @@ try{
 
     if(orderCheck.cancellable == false) return res.status(400).send({status:false, message:"Order cannot be cancelled"}) 
 
-    if((orderCheck.status == "cancelled") && ((status == "cancelled" ) || (status == "completed"))) return res.status(400).send({status:false, message:"Order already cancelled place a new order"}) 
+    if(orderCheck.status == "cancelled") return res.status(400).send({status:false, message:"Order already cancelled place a new order"}) 
 
-    if((orderCheck.status == "completed") && ((status == "completed" ) || (status == "cancelled" )) ) return res.status(400).send({status:false, message:"Order already completed cannot be cancelled"}) 
+    if(orderCheck.status == "completed") return res.status(400).send({status:false, message:"Order already completed cannot be cancelled"}) 
     
     //updating order status
     const updateOrderStatus = await orderModel.findOneAndUpdate( {_id:orderId, cancellable:true}, {status:status}, {new:true})

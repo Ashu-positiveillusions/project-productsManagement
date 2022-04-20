@@ -118,6 +118,8 @@ try{
 const loginUser = async function (req, res) {
 try{
 
+    if(Object.keys(req.body).length == 0) return res.status(400).send({ status: false, message: "Please Provide Email-Id and Password" })
+
     const { email, password } = req.body;
 
     if (!email) return res.status(400).send({ status: false, message: "Please Provide Email-Id" })
