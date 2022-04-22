@@ -21,7 +21,7 @@ try{
     if(!description) return res.status(400).send({status: false, message:"Description Required"})
     if(!price) return res.status(400).send({status: false, message:"Price Required"})
     
-    price = JSON.parse(price)
+    productData.price = JSON.parse(price)
     
     //validation of availableSizes
     const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
@@ -57,108 +57,35 @@ const productsData = async function(req,res){
 try{
 
     const filter = req.query;
-    const keys = Object.keys(filter);
-    filter.isDeleted = false
 
-    if(keys.includes("priceSort")){
-        if(!((filter.priceSort == 1) || (filter.priceSort == -1))) return res.status(400).send({status: false, message: "priceSort value should be either 1 or -1"})
+
+    let {name, priceSort, size, priceGreaterThan, priceLessThan} = filter;
+
+    let appliedFilter = {}
+    if(name) appliedFilter.title = {$regex: name}
+
+    if(size) appliedFilter.availableSizes = {$in: size}
+
+    if(priceGreaterThan && priceLessThan) {
+        appliedFilter.price = {$gt: priceGreaterThan, $lt: priceLessThan}
+    }else if(priceGreaterThan && !priceLessThan){
+        appliedFilter.price = {$gt: priceGreaterThan}
+    }else if(!priceGreaterThan && priceLessThan){
+        appliedFilter.price = {$lt: priceLessThan}
     }
 
-    // filter includes name
-    if(keys.includes("name")){
-        let name1 = filter.name;
-        delete filter.name;
-        filter.title = {$regex: name1}//$regex: provides regular expression capabilities for pattern matching strings in queries.
-        console.log(filter);
+    if(priceSort){
+        if(!((priceSort==1) || (priceSort == -1))) return res.status(400).send({status: false, message: "priceSort value should be either 1 or -1"})
 
-        if(keys.includes("priceSort")){
-            const sort = filter.priceSort;
-            delete filter.priceSort;
-            const products = await productModel.find(filter).sort({price: sort});
+        const products = await productModel.find(appliedFilter).sort({price: priceSort});
             if(products.length == 0) return res.status(404).send({status: false, message: "No products available."})
             return res.status(200).send({status: true, message: "success", data: products})
-        }
-        const products = await productModel.find(filter);
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available."})
-        return res.status(200).send({status: true, message: "success", data: products})
     }
 
-    // filter includes size
-    if(keys.includes("size")){
-        let size = filter.size.split(",");
-        delete filter.size
-        filter.availableSizes = {$in: size}
-        console.log(filter);
-        if(keys.includes("priceSort")){
-            const sort = filter.priceSort;
-            delete filter.priceSort;
-            const products = await productModel.find(filter).sort({price: sort});
-            if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested sizes."})
+    const products = await productModel.find(appliedFilter);
+            if(products.length == 0) return res.status(404).send({status: false, message: "No products available."})
             return res.status(200).send({status: true, message: "success", data: products})
-        }
-        const products = await productModel.find(filter);
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested sizes."})
-        return res.status(200).send({status: true, message: "success", data: products})
-    }
 
-    // filter includes price - gt and lt
-    if((keys.includes("priceGreaterThan")) && (keys.includes("priceLessThan"))){
-        let gt = Number(filter.priceGreaterThan);
-        let lt = Number(filter.priceLessThan);
-        if(keys.includes("priceSort")){
-            const sort = filter.priceSort;
-            delete filter.priceSort;
-            const products = await productModel.find({price: {$gt: gt, $lt: lt}, isDeleted:false}).sort({price: sort});
-            if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-            return res.status(200).send({status: true, message: "success", data: products})
-        }
-        const products = await productModel.find({price: {$gt: gt, $lt: lt}, isDeleted:false});
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-        return res.status(200).send({status: true, message: "success", data: products})
-    }
-
-    if(keys.includes("priceGreaterThan")){
-        let gt = Number(filter.priceGreaterThan);
-        if(keys.includes("priceSort")){
-            const sort = filter.priceSort;
-            delete filter.priceSort;
-            const products = await productModel.find({price: {$gt: gt}, isDeleted:false}).sort({price: sort});
-            if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-            return res.status(200).send({status: true, message: "success", data: products})
-        }
-        const products = await productModel.find({price: {$gt: gt}, isDeleted:false});
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-        return res.status(200).send({status: true, message: "success", data: products})
-    }
-
-    if(keys.includes("priceLessThan")){
-        let lt = Number(filter.priceLessThan);
-        if(keys.includes("priceSort")){
-            const sort = filter.priceSort;
-            delete filter.priceSort;
-            const products = await productModel.find({price: {$lt: lt}, isDeleted:false}).sort({price: sort});
-            if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-            return res.status(200).send({status: true, message: "success", data: products})
-        }
-        const products = await productModel.find({price: {$lt: lt}, isDeleted:false});
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available for requested prices."})
-        return res.status(200).send({status: true, message: "success", data: products})
-    }
-
-    // filter includes size and name
-    // filter includes name and price - gt and lt
-    // filter includes size and price - gt and lt
-    // filter includes name and price and size
-    
-    if(keys.includes("priceSort")){
-        const sort = filter.priceSort;
-        delete filter.priceSort;
-        const products = await productModel.find(filter).sort({price: sort});
-        if(products.length == 0) return res.status(404).send({status: false, message: "No products available."})
-        return res.status(200).send({status: true, message: "success", data: products})
-    }
-    const products = await productModel.find(filter);
-    return res.status(200).send({status:true, message: "Success", data: products})
 
 }catch(error){
     return res.status(500).send({status:false, Error:error.message})
@@ -174,7 +101,6 @@ try{
     if(!(validator.isValidObjectId(productId))) return res.status(400).send({status: false, message: "Please provide valid productId"})
 
     const productDetails = await productModel.findOne({_id:productId, isDeleted:false})
-
     if(!productDetails) return res.status(404).send({status:false, message:"No such product exists"})
 
     return res.status(200).send({status: true, message: 'Success', data:productDetails})
@@ -201,11 +127,12 @@ try{
 
     if(Object.keys(updateData).length == 0) return res.status(400).send({status:false, message:"Please provide data to update"})
     
-    const keys = Object.keys(updateData)
+    
+    const {title, description, availableSizes} = updateData;
 
 
     //title duplicity
-    if(keys.includes("title")){
+    if(title){
         if(!updateData.title) return res.status(400).send({status: false, message: "Please provide a proper title to update."})
         updateData.title = updateData.title.trim();
         if(!updateData.title) return res.status(400).send({status: false, message: "Please provide a proper title to update."})
@@ -213,16 +140,16 @@ try{
         if(duplicateTitle) return res.status(400).send({status:false, message:"Title is duplicate"})
     }
 
-    if(keys.includes("description")){
+    if(description){
         if(!updateData.description) return res.status(400).send({status: false, message: "Please provide a proper description to update."})
         updateData.description = updateData.description.trim();
         if(!updateData.description) return res.status(400).send({status: false, message: "Please provide a proper description to update."})
     }
     
     //enum check availableSizes
-    if(keys.includes("availableSizes")){
+    if(availableSizes){
         const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
-        if(!(updateData.availableSizes)) return res.status(400).send({status: false, message: "Please provide atleast one size to update" })
+        
         for(let i=0;i<updateData.availableSizes.length;i++){
             if(!(sizes.includes(updateData.availableSizes[i]))){
                 return res.status(400).send({status: false, message:"Sizes should be among [S, XS, M, X, L, XXL, XL]"})

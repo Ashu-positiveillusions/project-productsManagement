@@ -157,11 +157,9 @@ try{
     if (!(validator.isValidObjectId(userId))) return res.status(400).send({ status: false, message: "Please Provide valid userId" })
 
     //checking for authorized user
-    if (userId != req.headers["userid"]) return res.status(401).send({ status: false, message: "User is not Authorized" })
-
+    if (userId != req.loggedUser) return res.status(401).send({ status: false, message: "User is not Authorized" })
 
     const userDetails = await userModel.findById({ _id: userId })
-
     if (!userDetails) return res.status(404).send({ status: false, message: "No such User Exists" })
 
     return res.status(200).send({ status: true, message: "User profile details", data: userDetails })
@@ -181,7 +179,7 @@ try{
     if (!(validator.isValidObjectId(userId))) return res.status(400).send({ status: false, message: "Please Provide valid userId" })
 
     //checking for authorized user
-    if (userId != req.headers["userid"]) return res.status(401).send({ status: false, message: "You are not authorised." })
+    if (userId != req.loggedUser) return res.status(401).send({ status: false, message: "You are not authorised." })
 
 
         let files = req.files
@@ -194,36 +192,31 @@ try{
     const updateData = req.body;
     if (Object.keys(updateData).length == 0) return res.status(400).send({ status: false, message: "Please provide user details to be updated." })
 
-    const keysToUpdate = Object.keys(updateData);
-
-    if (keysToUpdate.includes("phone")) {
+    
+        //duplication check for valid Indian phone  
+    if (updateData.hasOwnProperty("phone")) {
         if (!(validator.checkIndianNumber(updateData.phone))) {
             return res.status(400).send({ status: false, message: "Please provide valid phone number." })
         }
+        let duplicate = await userModel.findOne({ phone: updateData.phone });
+        if (duplicate) return res.status(400).send({ status: false, message: "Phone number is already in use" });
     }
 
     //duplication check for a valid email   
-    if (keysToUpdate.includes("email")) {
+    if (updateData.hasOwnProperty("email")) {
         if (!(validator.checkValidEmail(updateData.email))) {
             return res.status(400).send({ status: false, message: "Please provide valid Email-Id." })
         }
         let duplicate = await userModel.findOne({ email: updateData.email });
-        if(!duplicate) return res.status(400).send({ status: false, message: "Email Id is already in use" });
+        if(duplicate) return res.status(400).send({ status: false, message: "Email Id is already in use" });
     }
 
-    if (keysToUpdate.includes("password")) {
+    if (updateData.hasOwnProperty("password")) {
         if (updateData.password.length < 8 || updateData.password.length > 15) {
             return res.status(400).send({ status: false, message: "Please provide password length in range 8-15." })
         }
         const pass = await bcrypt.hash(password, saltRounds)
         updateData.password = pass
-    }
-
-    //duplication check for phone    
-    if ((keysToUpdate.includes("phone"))) {
-        let duplicate = await userModel.findOne({ phone: updateData.phone });
-        if (!duplicate) return res.status(400).send({ status: false, message: "Phone number is already in use" });
-
     }
 
     const user = await userModel.findOne({ _id: userId })
@@ -232,7 +225,7 @@ try{
     const prevAddress = user.address;
 
     //checking if address is in object format
-    if (keysToUpdate.includes("address")) {
+    if (updateData.hasOwnProperty("address")) {
         if (typeof (updateData.address) != "object" || Object.keys(updateData.address).length == 0) return res.status(400).send({ status: false, message: "Please enter address in object format with valid keys." })
         const keys1 = Object.keys(updateData.address)
 

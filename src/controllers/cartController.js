@@ -6,119 +6,58 @@ const validator = require('../validator/validator')
 
 const createCart = async function(req, res){
 try{
-    
-    //path params,valid objectId & authorisation check
+
+    // validation and authorization of user
     const userId = req.params.userId;
-
-    //validating userId from path params
-    if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please Provide valid userId"})  
-
-    if(userId != req.headers["userid"]) return res.status(401).send({status: false, message: "User is not Authorized"}) 
-
-    //data from body
-    const cartData = req.body;
-
-    const userId1 = cartData.userId;
-
-    const productId = cartData.productId
-
-    const cartId = cartData.cartId
-
-    //userId must required
-    if(!userId1) return res.status(400).send({status:false, message:"Please provide userId"})
-
-    //validating userId from req.body
-    if(!(validator.isValidObjectId(userId1))) return res.status(400).send({status: false, message: "Please Provide valid userId"})  
-
-    //matched userId from path params and from req.body
-    if(userId != userId1) return res.status(400).send({status:false, message:"Please make sure that you can add products in cart for the logged in userId only"})
-
-    //checked if user exists or not
-    const user = await userModel.findById(userId1)
-
-    if(!user) return res.status(404).send({status:false, message:"User doesn't exists"})
-
+    if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please enter a valid UserId in params."})
+    if(userId != req.loggedUser) return res.status(401).send({status: false, message: "User is not Authorized"})
     
-    //checking if user has cart already or not
-    const cartIdCheck = await cartModel.findOne({userId:userId1})
+    // checking if user exists
+    const user = await userModel.findOne({_id: userId}).lean()
+    if(!user) return res.status(400).send({status: false, message: "User not found in database."})
+    
+    const details = req.body;
 
-    //checking if user is passing cartId and a valid one which exists in db
-    if(cartData.cartId){
-        
-        //validating cartId from req.body
-        if(!(validator.isValidObjectId(cartId))) return res.status(400).send({status: false, message: "Please Provide valid cartId"})  
-
-        const cart = await cartModel.findById(cartId)
-        if(!cart) return res.status(404).send({status:false, message:"cartId doesn't exists or not a valid one"})
-    }
-
-    //creating new cart when user has no cart of his id
-    if(!cartIdCheck) {  
-
-        const keys = Object.keys(cartData)  
-
-        //creating new cart when user has no cart of his id and also simultaneously passing productId/product to add in cart
-        if(keys.includes("productId")){
-
-            //validating productId from req.body
-            if(!(validator.isValidObjectId(productId))) return res.status(400).send({status: false, message: "Please Provide valid productId"})  
-            
-            //checked if product exists or not
-            const product = await productModel.findOne({_id:productId, isDeleted:false, installments:{$gt:0}})
-            if(!product) return res.status(404).send({status:false, message:"Product doesn't exists or out of stock"}) 
-            
-            const productObject ={}   
-            productObject.productId = productId;
-            productObject.quantity = 1;              
-
-            let price = product.price
-            let totalPrice = price 
-            let totalItems = 1
-            
-            //decreasing the installments(stock) value of products in product model
-            const productInstallments = await productModel.findOneAndUpdate({_id:productId},{$inc:{installments:-1}},{new:true})
-            
-            //creating cart
-            const cart = await cartModel.create({userId:userId1, items:productObject, totalPrice:totalPrice,totalItems:totalItems })
-            return res.status(201).send({status:true, message:"Success", data:cart})
+    // checking if a cart already exists otherwise creating an empty cart
+    let cart1;
+    if(!(details.cartId)){
+        cart1 = await cartModel.findOne({userId: userId}).lean();
+        if(!cart1){
+            cart1 = await cartModel.create({userId:userId, items:[]})
         }
-
-        //creating new cart when user has no cart of his id and just passing only userId
-        const cart = await cartModel.create({userId:userId1, items:[]})
-        return res.status(201).send({status:true, message:"Success", data:cart})
-
-    }else{  //creating cart when user has cart of his id 
-        
-            //productId must required
-            if(!productId) return res.status(400).send({status:false, message:"Please provide productId"})
-
-            //checked if product exists or not
-            const product = await productModel.findOne({_id:productId, isDeleted:false, installments:{$gt:0}})
-            if(!product) return res.status(404).send({status:false, message:"Product doesn't exists or out of stock"})          
-        
-            let items = cartIdCheck.items            
-            let products = items.map(a => a.productId.toString())
-            
-            if(products.includes(productId)){//checking if passed productId/product already present in cart
-
-                let index = products.indexOf(productId)
-                items[index].quantity = items[index].quantity +1
-                
-            }else{ //if passed productId/product not present in cart   
-                        
-                items.push({productId:productId,quantity:1})    
-            }
-            let price = product.price
-            let totalPrice = cartIdCheck.totalPrice + price
-            let totalItems = cartIdCheck.totalItems + 1
-
-            //decreasing the installments(stock) value of products in product model
-            const productInstallments = await productModel.findOneAndUpdate({_id:productId},{$inc:{installments:-1}},{new:true})
-
-            //creating cart
-            const cart = await cartModel.findOneAndUpdate({userId:userId1},{items:items, totalPrice: totalPrice,totalItems:totalItems }, {new:true})
-            return res.status(201).send({status:true, message:"Success", data:cart})
+        details.cartId = cart1._id
     }
+    const cartId = details.cartId
+
+    // checking the product - if it is there in stock
+    const productId = details.productId;
+    let product = await productModel.findOne({_id: productId, isDeleted: false, installments: {$gt:0}}).lean()
+    if(!product) return res.status(400).send({status: false, message: "Product not found in database or is out of stock."})
+
+    const items = cart1.items;
+    let totalPrice = cart1.totalPrice
+    let totalItems = cart1.totalItems;
+
+    // checking if a product exists in cart - in not push its quantity of 1 or else increase the quantity
+    let productsArray = items.map(e => e.productId.toString()) // [ID1, ID2]
+    if(!(productsArray.includes(productId))){
+        items.push({productId:productId, quantity: 1})
+    }else{
+        let index = productsArray.indexOf(productId);
+        items[index].quantity = items[index].quantity + 1;
+    }
+
+    totalPrice = totalPrice + product.price;
+    totalItems = totalItems + 1;
+
+    const obj = {items: items, totalPrice: totalPrice, totalItems: totalItems};
+
+    // updating the cart and product database
+    const updatedCart = await cartModel.findOneAndUpdate({_id: cartId} ,obj ,{new:true})
+    const updatedProduct = await productModel.findOneAndUpdate({_id:productId}, {$inc: {installments:-1}}, {new:true})
+    return res.status(201).send({status:true, message: "success", data: updatedCart})
+
+
 }catch(error){
     return res.status(500).send({status:false, Error:error.message})
 }
@@ -136,7 +75,7 @@ try{
     //validating userId from path params
     if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please Provide valid userId"})  
 
-    if(userId != req.headers["userid"]) return res.status(401).send({status: false, message: "User is not Authorized"}) 
+    if(userId != req.loggedUser) return res.status(401).send({status: false, message: "User is not Authorized"}) 
 
     
     //checked if user exists or not
@@ -147,20 +86,15 @@ try{
 
     //data from body
     const cartData = req.body;
-
-    const cartId = cartData.cartId
-
-    const productId = cartData.productId
-
-    const removeProduct = cartData.removeProduct
+    const{cartId, productId, removeProduct} = cartData
 
     
     //cartId must required
     if(!cartId) return res.status(400).send({status:false, message:"Please provide cartId"})
 
-    
     //productId must required
     if(!productId) return res.status(400).send({status:false, message:"Please provide productId"})
+    
 
 
     //validating cartId from req.body
@@ -178,7 +112,7 @@ try{
     if(cart.userId != userId)  return res.status(400).send({status: false, message: "cart doesn't belongs to loggedIn user"}) 
 
     //checking removeProduct value in-between 0 & 1
-    if(removeProduct != 0 && removeProduct !=1) return res.status(400).send({status: false, message: "removeProduct value should be 0 or 1"})  
+    if((!removeProduct && removeProduct != 0) || (removeProduct != 0 && removeProduct !=1)) return res.status(400).send({status: false, message: "Please provide removeProduct with value 0 or 1"})  
 
 
     //removing product from cart    
@@ -248,7 +182,7 @@ try{
 
     if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please enter a valid UserId in params."})
 
-    if(userId != req.headers["userid"]) return res.status(401).send({status: false, message: "User is not Authorized"})
+    if(userId != req.loggedUser) return res.status(401).send({status: false, message: "User is not Authorized"})
     
     const user = await userModel.findOne({_id: userId})
     if(!user) return res.status(404).send({status: false, message: "User not found in database."})
@@ -273,7 +207,7 @@ try{
     const userId = req.params.userId
     if(!(validator.isValidObjectId(userId))) return res.status(400).send({status: false, message: "Please enter a valid UserId in params."})
 
-    if(userId != req.headers["userid"]) return res.status(401).send({status: false, message: "User is not Authorized"})
+    if(userId != req.loggedUser) return res.status(401).send({status: false, message: "User is not Authorized"})
     
     const user = await userModel.findOne({_id: userId})
 
