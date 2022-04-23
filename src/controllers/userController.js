@@ -194,7 +194,7 @@ try{
 
     
         //duplication check for valid Indian phone  
-    if (updateData.hasOwnProperty("phone")) {
+    if (Object.hasOwn(updateData,"phone")) {
         if (!(validator.checkIndianNumber(updateData.phone))) {
             return res.status(400).send({ status: false, message: "Please provide valid phone number." })
         }
@@ -203,7 +203,7 @@ try{
     }
 
     //duplication check for a valid email   
-    if (updateData.hasOwnProperty("email")) {
+    if (Object.hasOwn(updateData,"email")) {
         if (!(validator.checkValidEmail(updateData.email))) {
             return res.status(400).send({ status: false, message: "Please provide valid Email-Id." })
         }
@@ -211,7 +211,7 @@ try{
         if(duplicate) return res.status(400).send({ status: false, message: "Email Id is already in use" });
     }
 
-    if (updateData.hasOwnProperty("password")) {
+    if (Object.hasOwn(updateData,"password")) {
         if (updateData.password.length < 8 || updateData.password.length > 15) {
             return res.status(400).send({ status: false, message: "Please provide password length in range 8-15." })
         }
@@ -225,7 +225,7 @@ try{
     const prevAddress = user.address;
 
     //checking if address is in object format
-    if (updateData.hasOwnProperty("address")) {
+    if (Object.hasOwn(updateData,"address")) {
         if (typeof (updateData.address) != "object" || Object.keys(updateData.address).length == 0) return res.status(400).send({ status: false, message: "Please enter address in object format with valid keys." })
         const keys1 = Object.keys(updateData.address)
 
