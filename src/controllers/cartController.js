@@ -31,6 +31,7 @@ try{
 
     // checking the product - if it is there in stock
     const productId = details.productId;
+    if(!productId) return res.status(400).send({status: false, message: "Please provide a product Id"})
     let product = await productModel.findOne({_id: productId, isDeleted: false, installments: {$gt:0}}).lean()
     if(!product) return res.status(400).send({status: false, message: "Product not found in database or is out of stock."})
 
@@ -131,9 +132,9 @@ try{
 
         let price = productInstallments.price
 
-        let totalPrice = cart.totalPrice -(quantity * price)
+        let totalPrice = cart.totalPrice - (quantity * price)
 
-        let totalItems = cart.totalItems -quantity
+        let totalItems = cart.totalItems - quantity
 
         items.splice(index, 1)
 
@@ -158,17 +159,14 @@ try{
         if(items[index].quantity == 0){
             
             items.splice(index, 1)
-
-
             const cartCreate = await cartModel.findOneAndUpdate({_id:cartId}, {items:items, totalPrice: totalPrice,totalItems:totalItems }, {new:true})
             return res.status(201).send({status:true, message:"Success", data:cartCreate})
         }
+        
         //creating cart
         const cartCreate = await cartModel.findOneAndUpdate({_id:cartId}, {items:items, totalPrice: totalPrice,totalItems:totalItems }, {new:true})
         return res.status(201).send({status:true, message:"Success", data:cartCreate})
     }
-
-    
 }catch(error){
     return res.status(500).send({status:false, Error:error.message})
 }
@@ -176,7 +174,6 @@ try{
 
 
 const getCart = async function(req,res){
-
 try{
     const userId = req.params.userId
 
@@ -189,9 +186,7 @@ try{
 
 
     const cart = await cartModel.findOne({userId: userId}).lean().populate('items.productId');
-
     if(!cart) return res.status(404).send({status: false, message: "Cart not found in database."})
-
     return res.status(200).send({status: true, message: "success", data: cart})
 
 }catch(error){
@@ -216,10 +211,9 @@ try{
 
     const cart = await cartModel.findOneAndUpdate({userId: userId},{items:[], totalPrice:0, totalItems:0})
 
-    if(!cart) return res.status(404).send({status: false, message: "Cart not found in database"})
+    if(!cart) return res.status(404).send({status: false, message: "Cart not found in database or might be already deleted."})
     
-    if(cart.items.length == 0) return res.status(404).send({status: false, message: "Cart not found in database or might be already deleted."})
-
+    
 
     const items = cart.items
     for(let i=0; i<items.length; i++){

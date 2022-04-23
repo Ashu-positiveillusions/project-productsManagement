@@ -8,7 +8,6 @@ const orderController = require("../controllers/orderController")
 const auth = require("../middleware/auth")
 
 
-
 //user api
 router.post('/register', userController.registerUser)
 router.post('/login', userController.loginUser)

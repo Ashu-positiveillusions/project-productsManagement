@@ -26,6 +26,7 @@ try{
     //validation of availableSizes
     const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
     if(!availableSizes) return res.status(400).send({status: false, message: "Please enter atleast one size."})
+    
     for(let i=0;i<availableSizes.length;i++){
         if(!(sizes.includes(availableSizes[i]))){
             return res.status(400).send({status: false, message:"Sizes should be among [S, XS, M, X, L, XXL, XL]"})
@@ -60,8 +61,9 @@ try{
 
 
     let {name, priceSort, size, priceGreaterThan, priceLessThan} = filter;
-
-    let appliedFilter = {}
+    
+    // creating an object with isDeleted as false so that no deleted product is returned
+    let appliedFilter = {isDeleted: false}
     if(name) appliedFilter.title = {$regex: name}
 
     if(size) appliedFilter.availableSizes = {$in: size}
@@ -110,6 +112,8 @@ try{
 }
 }
 
+
+
 const updateProductById = async function(req, res){ 
 try{
 
@@ -150,7 +154,7 @@ try{
     if(availableSizes){
         const sizes =  ["S", "XS","M","X", "L","XXL", "XL"]
         
-        for(let i=0;i<updateData.availableSizes.length;i++){
+        for(let i=0;i<=updateData.availableSizes.length;i++){
             if(!(sizes.includes(updateData.availableSizes[i]))){
                 return res.status(400).send({status: false, message:"Sizes should be among [S, XS, M, X, L, XXL, XL]"})
             }
